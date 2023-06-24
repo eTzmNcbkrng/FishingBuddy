@@ -3,17 +3,13 @@
 -- With the Midnight Salmon lure, we now need to do
 -- funky things
 --
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
-
 -- 5.0.4 has a problem with a global "_" (see some for loops below)
 local _
 
 local FL = LibStub("LibFishing-1.0");
 
-local GSB = function(...) return FBI:GetSettingBool(...); end;
-local PLANS = FBI.FishingPlans;
+local GSB = FishingBuddy.GetSettingBool;
+local PLANS = FishingBuddy.FishingPlans;
 
 local CurLoc = GetLocale();
 
@@ -80,7 +76,7 @@ function LureStateManager:ClearLastLure(checktime)
 end
 
 
-FBI.LureStateManager = LureStateManager
+FishingBuddy.LureStateManager = LureStateManager
 local LSM = LureStateManager
 
 local SALMON_LURE_ID = 165699;
@@ -150,8 +146,8 @@ end
 
 local LuringEvents = {}
 LuringEvents["VARIABLES_LOADED"] = function(started)
-    FBI:SetupSpecialItems({ [SALMON_LURE_ID] = SalmonLure }, false, true, true)
-    FBI:UpdateFluffOption(SALMON_LURE_ID, SalmonLure)
+    FishingBuddy.SetupSpecialItems({ [SALMON_LURE_ID] = SalmonLure }, false, true, true)
+    FishingBuddy.UpdateFluffOption(SALMON_LURE_ID, SalmonLure)
     PLANS:RegisterPlan(LurePlan)
 end
 
@@ -161,4 +157,4 @@ LuringEvents["UNIT_SPELLCAST_CHANNEL_START"] = function(unit, lineid, spellid)
     end
 end
 
-FBI:RegisterHandlers(LuringEvents);
+FishingBuddy.RegisterHandlers(LuringEvents);

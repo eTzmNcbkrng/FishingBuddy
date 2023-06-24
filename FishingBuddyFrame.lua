@@ -1,10 +1,6 @@
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
-
 local _
 
-local LTF = LibStub("LibTabbedFrame-1.0");
+local LFH = LibStub("LibTabbedFrame-1.0");
 local LO = LibStub("LibOptionsFrame-1.0");
 local LS = LibStub("LibSideTabFrame-1.0");
 
@@ -19,20 +15,23 @@ local FBFRAMES = {
 };
 
 local ManagedFrames = {};
-function FBEnvironment:DisableSubFrame(target)
+local function DisableSubFrame(target)
     FishingBuddyFrame:DisableSubFrame(target);
 end
+FishingBuddy.DisableSubFrame = DisableSubFrame;
 
-function FBEnvironment:EnableSubFrame(target)
+local function EnableSubFrame(target)
     FishingBuddyFrame:EnableSubFrame(target);
 end
+FishingBuddy.EnableSubFrame = EnableSubFrame;
 
-function FBEnvironment:ManageFrame(target, tabname, tooltip, toggle)
+local function ManageFrame(target, tabname, tooltip, toggle)
     FishingBuddyFrame:ManageFrame(target, tabname, tooltip, toggle);
 end
+FishingBuddy.ManageFrame = ManageFrame;
 
 local function Group_OnClick(tabframe, tabname)
-    for _,group in ipairs(tabframe.target.groups) do
+    for idx,group in ipairs(tabframe.target.groups) do
         if group.name == tabname then
             group.frame:Show()
         else
@@ -58,11 +57,11 @@ local function HideFrameGroup(self)
     end
 end
 
-function FBI:CreateManagedOptionsTab(target, tabname, groups, optiontab)
+local function CreateManagedOptionsTab(target, tabname, groups, optiontab)
     local tabframe = _G["Options"..tabname];
     if (not tabframe) then
         tabframe = CreateFrame("Frame", "Options"..tabname, target);
-        FBI:EmbeddedOptions(tabframe)
+        FishingBuddy.EmbeddedOptions(tabframe)
         tabframe:SetScript("OnShow", function (self)
             self:ShowButtons();
         end)
@@ -76,10 +75,11 @@ function FBI:CreateManagedOptionsTab(target, tabname, groups, optiontab)
         tabframe.ontabclick = Group_OnClick
         target.handoff = tabframe
     end
-    FBI.OptionsFrame.HandleOptions(optiontab.name, optiontab.icon, optiontab.options, optiontab.setter, optiontab.getter, optiontab.last, target)
+    FishingBuddy.OptionsFrame.HandleOptions(optiontab.name, optiontab.icon, optiontab.options, optiontab.setter, optiontab.getter, optiontab.last, target)
 end
+FishingBuddy.CreateManagedOptionsTab = CreateManagedOptionsTab;
 
-function FBI:CreateManagedFrameGroup(tabname, tooltip, toggle, groups, optiontab)
+local function CreateManagedFrameGroup(tabname, tooltip, toggle, groups, optiontab)
     local target = _G["Managed"..tabname];
     if not target then
         target = FishingBuddyFrame:CreateManagedFrame("Managed"..tabname, tabname, tooltip, toggle);
@@ -87,7 +87,7 @@ function FBI:CreateManagedFrameGroup(tabname, tooltip, toggle, groups, optiontab
         target:SetScript("OnShow", ShowFrameGroup);
         target:SetScript("OnHide", HideFrameGroup);
         target.groups = groups
-        for _,group in ipairs(groups) do
+        for idx,group in ipairs(groups) do
             local tabframe = target:CreateTab(group.name, group.icon, Group_OnClick, group.tooltip or group.name);
             group.frame, _ = target:GetFrameInfo(group.frame)
             group.frame.tabframe = tabframe;
@@ -97,7 +97,7 @@ function FBI:CreateManagedFrameGroup(tabname, tooltip, toggle, groups, optiontab
         end
     else
         -- Add new groups to the target.
-        for _,group in ipairs(groups) do
+        for idx,group in ipairs(groups) do
             local tabframe = target:CreateTab(group.name, group.icon, Group_OnClick, group.tooltip or group.name);
             group.frame, _ = target:GetFrameInfo(group.frame)
             group.frame:Hide()
@@ -107,25 +107,22 @@ function FBI:CreateManagedFrameGroup(tabname, tooltip, toggle, groups, optiontab
     end
 
     if (optiontab) then
-        self:CreateManagedOptionsTab(target, tabname, groups, optiontab)
+        CreateManagedOptionsTab(target, tabname, groups, optiontab)
     end
 
     target:ResetTabFrames();
     target:SelectTab(target:GetSelected());
     return target
 end
+FishingBuddy.CreateManagedFrameGroup = CreateManagedFrameGroup;
 
-
-function FBI:ToggleFishingBuddyFrame(target)
+function ToggleFishingBuddyFrame(target)
     FishingBuddyFrame:ToggleTab(target);
 end
-FBEnvironment.ToggleFishingBuddyFrame = function(target)
-    FBI:ToggleFishingBuddyFrame(target);
-end;
 
 local function OnVariablesLoaded(self, _, ...)
     -- set up mappings
-    for _,info in pairs(FBFRAMES) do
+    for idx,info in pairs(FBFRAMES) do
         local tf = FishingBuddyFrame:MakeFrameTab(info.frame, info.name, info.tooltip, info.toggle);
         if ( info.first) then
             FishingBuddyFrame:MakePrimary(info.frame);
@@ -136,11 +133,11 @@ local function OnVariablesLoaded(self, _, ...)
 end
 
 local function OnShow()
-    FBI:RunHandlers(FBConstants.FRAME_SHOW_EVT);
+    FishingBuddy.RunHandlers(FBConstants.FRAME_SHOW_EVT);
 end
 
-FishingBuddyFrame = LTF:CreateFrameHandler("FishingBuddyFrame",
-            "Interface\\LootFrame\\FishingLoot-Icon", FBConstants.WINDOW_TITLE, "FishingBuddy",
+FishingBuddyFrame = LFH:CreateFrameHandler("FishingBuddyFrame",
+            "Interface\\LootFrame\\FishingLoot-Icon", FBConstants.WINDOW_TITLE, "FISHINGBUDDY",
             OnShow, nil, OnVariablesLoaded);
 FishingBuddyFrame:Show();
 FishingBuddyFrame:Hide();

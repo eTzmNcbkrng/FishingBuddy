@@ -1,16 +1,13 @@
 -- Support for schools
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 local FL = LibStub("LibFishing-1.0");
 
 -- 5.0.4 has a problem with a global "_" (see some for loops below)
 local _
 
-local zmto = function(...) return FBI:ZoneMarkerTo(...); end;
+local zmto = FishingBuddy.ZoneMarkerTo;
 
-FBI.Schools = {};
+FishingBuddy.Schools = {};
 
 local CLOSEENOUGH = 15; -- fifteen yards
 
@@ -21,7 +18,7 @@ local CLOSEENOUGH = 15; -- fifteen yards
 local function AddFishingSchool(kind, fishid, mapId, sidx, x, y)
 	local entry = {};
 	if ( not mapId ) then
-		mapId, _ = FBI:GetCurrentMapIdInfo();
+		mapId, _ = FishingBuddy.GetCurrentMapIdInfo();
 	end
 	if ( not x or not y ) then
 		_,_,x,y = FL:GetCurrentPlayerPosition();
@@ -31,7 +28,7 @@ local function AddFishingSchool(kind, fishid, mapId, sidx, x, y)
 	-- roughly in the direction that we're pointing now
 	-- since most people face the hole directly, it's a good bet anyway
 	local facing = GetPlayerFacing();
-	if ( facing ) then
+	if ( facing ) then		
 		local yx, yy = FL:GetZoneSize(mapId);
 		if ( yx ) then
 			facing = facing + math.pi;
@@ -42,8 +39,8 @@ local function AddFishingSchool(kind, fishid, mapId, sidx, x, y)
 			x, y = x / yx, y / yy;
 		end
 	end
-
-	local fszc = FBI.SZSchoolCounts;
+	
+	local fszc = FishingBuddy.SZSchoolCounts;
 	local midx = zmto(mapId, sidx);
 	if ( fishid ) then
 		if (not fszc[midx]) then
@@ -55,7 +52,7 @@ local function AddFishingSchool(kind, fishid, mapId, sidx, x, y)
 			fszc[midx][fishid] = 1;
 		end
 	end
-
+	
 	if ( not FishingBuddy_Info["FishSchools"] ) then
 		FishingBuddy_Info["FishSchools"] = {};
 	end
@@ -63,13 +60,12 @@ local function AddFishingSchool(kind, fishid, mapId, sidx, x, y)
 		FishingBuddy_Info["FishSchools"][mapId] = {};
 	else
 		-- how do we find the same pool?
-		local C, y1;
-		C, mapId, _, y = FL:GetCurrentPlayerPosition();
+		local C, mapId, x1, y1 = FL:GetCurrentPlayerPosition();
 		-- if we're in an instance, don't do math
 		if ( C ) then
 			for _,hole in pairs(FishingBuddy_Info["FishSchools"][mapId]) do
 				local d,_,_ = FL:GetWorldDistance(mapId, x, y, hole.x or x, hole.y or y);
-
+				
 				if ( d and d < CLOSEENOUGH ) then
 					hole.x = hole.x or x;
 					hole.y = hole.y or y;
@@ -106,7 +102,7 @@ local function AddFishingSchool(kind, fishid, mapId, sidx, x, y)
 	end
 	tinsert(FishingBuddy_Info["FishSchools"][mapId], entry);
 
-	FBI:RunHandlers(FBConstants.ADD_SCHOOL_EVT, kind, fishid, mapId, sidx, x, y);
+	FishingBuddy.RunHandlers(FBConstants.ADD_SCHOOL_EVT, kind, fishid, mapId, sidx, x, y);
 
 	return true;
 end
@@ -126,15 +122,15 @@ local function CheckFishingPool(fishid, poolhint)
 		if ( not info ) then
 			info = FL:IsFishingPool(FL.SCHOOL);
 		end
-		if ( AddFishingSchool(info.kind, fishid) and FBI:GetSettingBool("ShowNewSchools") ) then
-			FBI:Print(FBConstants.ADDFISHINFOMSG, info.name, GetRealZoneText());
+		if ( AddFishingSchool(info.kind, fishid) and FishingBuddy.GetSettingBool("ShowNewSchools") ) then
+			FishingBuddy.Print(FBConstants.ADDFISHINFOMSG, info.name, GetRealZoneText());
 		end
 	end
 end
 
 local function GetSchools(mapId)
 	if ( not mapId ) then
-		mapId, _ = FBI:GetCurrentMapIdInfo();
+		mapId, _ = FishingBuddy.GetCurrentMapIdInfo();
 	end
 	if ( FishingBuddy_Info["FishSchools"] and FishingBuddy_Info["FishSchools"][mapId] ) then
 		return FishingBuddy_Info["FishSchools"][mapId];
@@ -142,14 +138,14 @@ local function GetSchools(mapId)
 		return {};
 	end
 end
-FBI.Schools.GetSchools = GetSchools;
+FishingBuddy.Schools.GetSchools = GetSchools;
 
 -- The ones that have "school" in their names shouldn't be
 -- necessary, but do they all translate that way? We'll skip
 -- them for now, and just do the ones that aren't schools
 local nonschoolfish = {
 	13422,			-- Stonescale Eel Swarm
-
+	
 	74857,			-- Giant Mantis Shrimp Swarm
 	74864,			-- Reef Octopus Swarm
 };
@@ -173,7 +169,7 @@ local schoolfish = {
 	41801,			-- Moonglow Cuttlefish School
 	41806,			-- Musselback Sculpin School
 	41813,			-- Nettlefish School
-
+	
 	53065,			-- Albino Cavefish School
 	53066,			-- Blackbelly Mudfish School
 	53072,			-- Deepsea Sagefish School
@@ -181,7 +177,7 @@ local schoolfish = {
 	53064,			-- Highland Guppy School
 	53063,			-- Mountain Trout School
 	52325,			-- Volatile Fire (this won't actually work)
-
+	
 	74856,			-- Jade Lungfish School
 	74859,			-- Emperor Salmon School
 	74860,			-- Redbelly Mandarin School
@@ -191,30 +187,30 @@ local schoolfish = {
 	83064,			-- Spine Fish School
 };
 
-local HyperCompressedOcean = {
-	[168016] = {
-		["frFR"] = "Océan hyper-comprimé",
-		["deDE"] = "Hyperkomprimierter Ozean",
-		["enUS"] = "Hyper-Compressed Ocean",
-		["enGB"] = "Hyper-Compressed Ocean",
-		["itIT"] = "Oceano Ultra Compresso",
-		["koKR"] = "초압축 바다",
-		["zhCN"] = "Hyper-Compressed Ocean",
-		["ruRU"] = "Гиперсжатый океан",
-		["esES"] = "Océano hipercomprimido",
-		["esMX"] = "Océano hipercomprimido",
-		["ptBR"] = "Oceano Hipercomprimido",
-		["spell"] = 295044,
-	}
+local HyperCompressedOcean = {}
+HyperCompressedOcean[168016] = {
+    ["frFR"] = "Océan hyper-comprimé",
+    ["deDE"] = "Hyperkomprimierter Ozean",
+    ["enUS"] = "Hyper-Compressed Ocean",
+    ["enGB"] = "Hyper-Compressed Ocean",
+    ["itIT"] = "Oceano Ultra Compresso",
+    ["koKR"] = "초압축 바다",
+    ["zhCN"] = "Hyper-Compressed Ocean",
+    ["ruRU"] = "Гиперсжатый океан",
+    ["esES"] = "Océano hipercomprimido",
+    ["esMX"] = "Océano hipercomprimido",
+    ["ptBR"] = "Oceano Hipercomprimido",
+	["spell"] = 295044,
 }
 
-function FBI:AddSchoolFish()
+FishingBuddy.AddSchoolFish = function()
 	local loc = GetLocale();
+	local raw = FishingBuddy.StripRaw;
 	local fi = FishingBuddy_Info["Fishies"];
 	if ( fi ) then
 		for _,id in ipairs(nonschoolfish) do
 			if ( fi[id] and fi[id][loc] ) then
-				local name = FBI:StripRaw(fi[id][loc]);
+				local name = raw(fi[id][loc]);
 				FL:AddSchoolName(name);
 			end
 		end
@@ -230,4 +226,4 @@ SchoolEvents[FBConstants.RESET_FISHDATA_EVT] = function()
 	FishingBuddy_Info["FishSchools"] = {};
 end
 
-FBI:RegisterHandlers(SchoolEvents);
+FishingBuddy.RegisterHandlers(SchoolEvents);

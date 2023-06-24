@@ -1,24 +1,21 @@
 -- Minimap Button Handling
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
-FBI.Minimap = {};
+FishingBuddy.Minimap = {};
 
 local FL = LibStub("LibFishing-1.0");
 
 local icon = LibStub("LibDBIcon-1.0");
 local broker = LibStub:GetLibrary("LibDataBroker-1.1")
 
-local GSB = function(...) return FBI:GetSettingBool(...); end;
+local GSB = FishingBuddy.GetSettingBool;
 
 local function Minimap_OnClick(self, button, down)
 	if ( button == "RightButton" ) then
-		FBI:ToggleFishingBuddyFrame("FishingOptionsFrame");
-	elseif ( FBI:IsSwitchClick("MinimapClickToSwitch") ) then
-		FBI:Command(FBConstants.SWITCH);
+		ToggleFishingBuddyFrame("FishingOptionsFrame");
+	elseif ( FishingBuddy.IsSwitchClick("MinimapClickToSwitch") ) then
+		FishingBuddy.Command(FBConstants.SWITCH);
 	else
-		FBI:ToggleFishingBuddyFrame("FishingLocationsFrame");
+		ToggleFishingBuddyFrame("FishingLocationsFrame");
 	end
 end
 
@@ -42,7 +39,7 @@ local function setter(setting, value)
 	if (setting == "MinimapButtonVisible") then
 		FishingBuddy_Player["MinimapData"].hide = (not value);
 	else
-		FBI:OptionSetSetting(setting, value);
+		FishingBuddy.OptionSetSetting(setting, value);
 	end
 end
 
@@ -54,7 +51,7 @@ local function getter(setting)
 			return false;
 		end
 	else
-		return FBI:OptionGetSetting(setting);
+		return FishingBuddy.OptionGetSetting(setting);
 	end
 end
 
@@ -68,7 +65,7 @@ end
 
 MinimapEvents["VARIABLES_LOADED"] = function()
 	local _, info;
-
+	
 	if ( not FishingBuddy_Player["MinimapData"] ) then
 		FishingBuddy_Player["MinimapData"] = { hide=false };
 	end
@@ -83,10 +80,10 @@ MinimapEvents["VARIABLES_LOADED"] = function()
 				icon = "Interface\\Icons\\Trade_Fishing",
 				OnClick = Minimap_OnClick,
 			};
-
+		
 		icon:Register(FBConstants.NAME, data, FishingBuddy_Player["MinimapData"]);
 	end
 end
 
-FBI.OptionsFrame.HandleOptions(GENERAL, nil, MinimapOptions, setter, getter);
-FBI:RegisterHandlers(MinimapEvents);
+FishingBuddy.OptionsFrame.HandleOptions(GENERAL, nil, MinimapOptions, setter, getter);
+FishingBuddy.RegisterHandlers(MinimapEvents);

@@ -6,8 +6,6 @@
 
 -- For Simple settings, the menu item will be checked if the value matches
 -- For Complex settings, the menu item will be checked if any of the values has been selected
-local addonName, FBStorage = ...
-local  FBI = FBStorage
 
 -- 5.0.4 has a problem with a global "_" (see some for loops below)
 local _
@@ -15,13 +13,13 @@ local _
 local FL = LibStub("LibFishing-1.0")
 
 -- wrap settings
-local SSR = function(...) FBI:SetSetting(...); end;
-local GSR = function(...) return FBI:GetSetting(...); end;
-local GSB = function(...) return FBI:GetSettingBool(...); end;
+local SSR = FishingBuddy.SetSetting;
+local GSR = FishingBuddy.GetSetting;
+local GSB = FishingBuddy.GetSettingBool;
 
 --local function SSR(setting, value)
 --    print("SSR1", setting, FL:printable(value))
---    FBI.SetSetting(setting, value)
+--    FishingBuddy.SetSetting(setting, value)
 --    print("SSR2", setting, FL:printable(GSR(setting)))
 --end
 
@@ -34,7 +32,7 @@ local function FishingMenuFrame_OnHide(self)
 	local name = self:GetName()
 	local holder = _G[name.."Holder"]
 	if ( holder:IsShown() ) then
-		holder:Hide();
+		holder:Hide(); 
 	end
 end
 
@@ -255,7 +253,7 @@ local function FishingMenu_Update(self)
 	local buttons = self.buttons;
 	local choices = parent.choices;
 	local numButtons = #buttons;
-	local scrollOffset = HybridScrollFrame_GetOffset(self);
+	local scrollOffset = HybridScrollFrame_GetOffset(self); 
 	local choice;
 	for i = 1, numButtons do
 		local idx = i + scrollOffset;
@@ -295,10 +293,11 @@ local function FishingMenu_Toggle(self)
     local name = self:GetName()
 	if ( self:IsShown() ) then
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF);
-		self:Hide();
-	else
+		self:Hide(); 
+	else		
 		local menu = _G[name.."Menu"]
 		PlaySound(SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON);
+		menu:SetFrameLevel(self:GetFrameLevel()+3);
         FishingMenu_Update(menu);
 		self:Show();
 	end
@@ -397,7 +396,7 @@ function FSF:UpdateScrollMenu(scrollmenu, simple, complex)
     local choices, mapping = self:CreateMenuChoices(scrollmenu, simple, complex)
     holder.choices = choices
     holder.mapping = mapping
-    holder:SetFrameLevel(FishingBuddyFrame:GetFrameLevel()+1)
+
     local text = _G[name.."Text"];
     local original = text:GetText()
     local menuwidth = 0;
@@ -419,7 +418,9 @@ function FSF:UpdateScrollMenu(scrollmenu, simple, complex)
     local menu = _G[name.."HolderMenu"]
 	menu:SetWidth(menuwidth + 32);
     HybridScrollFrame_CreateButtons(menu, "FishingMenuButtonTemplate");
-    HybridScrollFrame_Update(menu, #choices * FSF.HM_LINE_HEIGHT, menu:GetHeight());
+    HybridScrollFrame_Update(menu, #choices * FSF.HM_LINE_HEIGHT, menu:GetHeight());		
+
+    local holder = _G[name.."Holder"]
     holder:SetSize(menu:GetWidth() + 38, menu:GetHeight() + 24);
 
     if (topwidth == 0) then
@@ -459,7 +460,7 @@ function FSF:CreateScrollMenu(name, label, simple, complex)
         tag:SetText(label..": ");
     end
 
-    -- Handle external onload override
+    -- Handle extrnal onload override
 	local onload = _G[name.."_OnLoad"];
 	if (onload) then
 		onload(toplevel)
@@ -468,10 +469,10 @@ function FSF:CreateScrollMenu(name, label, simple, complex)
     return toplevel
 end
 
-FBI.FSF = FSF
+FishingBuddy.FSF = FSF
 
 -- Referenced by FishingMenuButtonTemplate
-FBEnvironment.FishingMenuButton_OnClick = function(self)
+function  FishingMenuButton_OnClick(self)
     if (self.onclick) then
         self.onclick(self)
     end

@@ -15,7 +15,7 @@ FishingTranslations["Inject"] = {
     DASH = " -- ",
 
     AUTHOR = "Sutorix (sutorix@hotmail.com)",
-    COPYRIGHT = "(c) 2005-2022 by The Software Cobbler",
+    COPYRIGHT = "(c) 2005-2021 by The Software Cobbler",
 
     WEEKLY = "weekly",
     HOURLY = "hourly",
@@ -104,7 +104,6 @@ FishingTranslations["enUS"] = {
     SHOWLOCATIONS_INFO = "Display fishing history grouped by area caught.",
 
     ALLZOMGPETS = "Include all pets",
-    PETS = "Pets",
 
     -- Option names and tooltips
     CONFIG_SHOWBANNER_ONOFF       = "Show banner",
@@ -225,7 +224,7 @@ FishingTranslations["enUS"] = {
     CONFIG_TURNONSOUND_ONOFF  = "Force sound",
     CONFIG_TURNONSOUND_INFO   = "If enabled, always turn on sounds while fishing.",
     CONFIG_DINGQUESTFISH_ONOFF = "Fish Ringer",
-    CONFIG_DINGQUESTFISH_INFO = "If enabled, the quest added sound will play when a quest fish is caught.",
+    CONFIG_DINGQUESTFISH_INFO = "If enabled, the quest added sound will play when a Nat Pagle reputation fish is caught.",
 
     CONFIG_FISHINGRAID_ONOFF  = "Raid Support",
     CONFIG_FISHINGRAID_INFO  = "Turn on Fishing Raid features.",

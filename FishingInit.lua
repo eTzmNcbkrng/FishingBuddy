@@ -1,9 +1,6 @@
--- FBI
+-- FishingBuddy
 --
 -- Everything you wanted support for in your fishing endeavors
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 local FL = LibStub("LibFishing-1.0");
 
@@ -13,17 +10,17 @@ local lastPlayerVersion;
 local playerName;
 local realmName;
 
-local zmto = function(...) return FBI:ZoneMarkerTo(...); end;
-local zmex = function(...) return FBI:ZoneMarkerEx(...); end;
+local zmto = FishingBuddy.ZoneMarkerTo;
+local zmex = FishingBuddy.ZoneMarkerEx;
 
-function FBI:IsLoaded()
+FishingBuddy.IsLoaded = function()
 	return gotSetupDone;
 end
 
 -- if the old information is still there, then we might not have per
 -- character saved info, so let's save it away just in case. It'll go
 -- away the second time we load the add-on
-function FBI:SavePlayerInfo()
+FishingBuddy.SavePlayerInfo = function()
 	if ( FishingBuddy_Info[realmName] and
 		  FishingBuddy_Info[realmName]["Settings"] and
 		  FishingBuddy_Info[realmName]["Settings"][playerName] ) then
@@ -39,12 +36,12 @@ end
 local FishingInit = {};
 
 FishingInit.ResetHelpers = function()
-	FBI.MappedZones = {};
-	FBI.SortedZones = {};
-	FBI.SortedByZone = {};
-	FBI.SortedSubZones = {};
-	FBI.UniqueSubZones = {};
-	FBI.SubZoneMap = {};
+	FishingBuddy.MappedZones = {};
+	FishingBuddy.SortedZones = {};
+	FishingBuddy.SortedByZone = {};
+	FishingBuddy.SortedSubZones = {};
+	FishingBuddy.UniqueSubZones = {};
+	FishingBuddy.SubZoneMap = {};
 end
 
 -- Fill in the player name and realm
@@ -119,8 +116,8 @@ FishingInit.CheckRealm = function()
 			if ( old ) then
 				if ( not FishingBuddy_Info[realmName] ) then
 					FishingBuddy_Info[realmName] = { };
-					for _,subtab in pairs(tabs) do
-						FishingBuddy_Info[realmName][subtab] = { };
+					for _,tab in pairs(tabs) do
+						FishingBuddy_Info[realmName][tab] = { };
 					end
 				end
 
@@ -133,6 +130,7 @@ FishingInit.CheckRealm = function()
 
 			-- clean out cruft, if we have some
 			FishingBuddy_Info[tab][UNKNOWNOBJECT] = nil;
+			FishingBuddy_Info[tab][UKNOWNBEING] = nil;
 
 			-- Duh, table.getn doesn't work because there
 			-- aren't any integer keys in this table
@@ -392,8 +390,8 @@ FishingInit.ConvertToMapId = function()
 			local mapId = FishingInit.mapid_lookup[name]
 			if mapId then
 				known[mapId] = name
-				local zidm = FBI:ZoneMarkerTo(zidx)
-				local newzidm = FBI:ZoneMarkerTo(mapId)
+				local zidm = FishingBuddy.ZoneMarkerTo(zidx)
+				local newzidm = FishingBuddy.ZoneMarkerTo(mapId)
 				local szcount = FishingBuddy_Info['SubZones'][zidm] or 0
 				subzones[newzidm] = szcount
 				totals[newzidm] = FishingBuddy_Info['FishTotals'][zidm]
@@ -401,15 +399,15 @@ FishingInit.ConvertToMapId = function()
 					schools[mapId] = FishingBuddy_Info['FishSchools'][zidx]
 				end
 				for idx=1,szcount do
-					local sidm = FBI:ZoneMarkerTo(zidx, idx)
-					local newsidm = FBI:ZoneMarkerTo(mapId, idx)
+					local sidm = FishingBuddy.ZoneMarkerTo(zidx, idx)
+					local newsidm = FishingBuddy.ZoneMarkerTo(mapId, idx)
 					subzones[newsidm] = FishingBuddy_Info['SubZones'][sidm]
 					totals[newsidm] = FishingBuddy_Info['FishTotals'][sidm]
 					skills[newsidm] = FishingBuddy_Info['FishingSkill'][sidm]
 					holes[newsidm] = FishingBuddy_Info['FishingHoles'][sidm]
 				end
 			else
-				FBI:Debug("Failed to find zone ", name)
+				FishingBuddy.Debug("Failed to find zone ", name)
 				missing[name] = true
 			end
 		end
@@ -461,6 +459,93 @@ FishingInit.UpdateFishingDB = function()
 	-- Still doesn't help use for subzone names though :-(
 	FishingInit.ConvertToMapId()
 
+	if (version < 19500) then
+		-- Possible double subzones
+		local founddup = false
+		local counter = {}
+		local dups = {}
+		local fisubzones = FishingBuddy_Info['SubZones']
+		for sidm,data in pairs(fisubzones) do
+			if type(data) ~= "number" then
+				local mapId, _ = zmex(sidm)
+				if not counter[mapId] then
+					counter[mapId] = { sidm }
+				else
+					founddup = true
+					dups[mapId] = true
+					tinsert(counter[mapId], sidm)
+				end
+			end
+		end
+
+		if founddup then
+			local ft = FishingBuddy_Info["FishTotals"]
+			for mapId,_ in pairs(dups) do
+				local counters = counter[mapId]
+				table.sort(counters, function(a,b) return a>b end)
+				local sidm = counters[#counters]
+				if not FishingBuddy_Info['KnownZones'][mapId] then
+					FishingBuddy_Info['KnownZones'][mapId] = true
+				end
+				-- Remove the duplicates
+				local zidm = zmto(mapId, 0)
+				for idx=#counters,2,-1 do
+					local badm = zmto(mapId, idx)
+					FishingBuddy_Info["FishingSkill"][badm] = nil
+					FishingBuddy_Info['SubZones'][badm] = nil
+					FishingBuddy_Info['SubZones'][zidm] = FishingBuddy_Info['SubZones'][zidm] - 1
+					if (FishingBuddy_Info["FishingHoles"][badm]) then
+						if (not FishingBuddy_Info["FishingHoles"][sidm]) then
+							FishingBuddy_Info["FishingHoles"][sidm] = {}
+						end
+						local fh = FishingBuddy_Info["FishingHoles"][sidm]
+						for fishid,count in pairs(FishingBuddy_Info["FishingHoles"][badm]) do
+							if not fh[fishid] then
+								fh[fishid] = 0
+							end
+							fh[fishid] = fh[fishid] + count
+						end
+						FishingBuddy_Info["FishingHoles"][badm] = nil
+					end
+					if (ft[badm]) then
+						ft[sidm] = (ft[sidm] or 0) + ft[badm]
+						ft[badm] = nil
+					end
+				end
+				-- Now make sure we don't have any holes in our subzone map
+				counter = {}
+				for sidm,data in pairs(fisubzones) do
+					if type(data) ~= "number" then
+						local mapId, _ = zmex(sidm)
+						if not counter[mapId] then
+							counter[mapId] = { sidm }
+						else
+							tinsert(counter[mapId], sidm)
+						end
+					end
+				end
+				for mapId,szidms in pairs(counter) do
+					local updates = { 'FishingSkill', 'SubZones', 'FishingHoles', 'FishTotals' }
+					table.sort(szidms)
+					local sidmcount = #szidms
+					local zidx, maxsidm = zmex(szidms[sidmcount])
+					if maxsidm > sidmcount then
+						for idx=1,sidmcount do
+							local sidm = zmto(zidx, idx)
+							local badm = szidms[idx]
+							if sidm < badm then
+								for _,update in ipairs(updates) do
+									FishingBuddy_Info[update][sidm] = FishingBuddy_Info[update][badm]
+									FishingBuddy_Info[update][badm] = nil
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
     local location = FishingBuddy_Player["WatcherLocation"];
     if location and location["x"] ~= nil then
         for _,key in ipairs({"x", "y", "point", "scale"}) do
@@ -488,7 +573,7 @@ FishingInit.UpdateFishingDB = function()
 				return
 			end
 			TownsfolkTracker:OldCreateIcons()
-			self.icons_created = true
+			self.icons_created = True
 		end
 		TownsfolkTracker.OldDrawDungeonMinimapIcons = TownsfolkTracker.DrawDungeonMinimapIcons;
 		function TownsfolkTracker:DrawDungeonMinimapIcons(mapId)
@@ -505,7 +590,7 @@ FishingInit.UpdateFishingDB = function()
 	FishingBuddy_Player["Version"] = FBConstants.CURRENTVERSION;
 end
 
-function FBI:GetLastVersion()
+FishingBuddy.GetLastVersion = function()
 	return lastVersion, lastPlayerVersion;
 end
 
@@ -522,29 +607,29 @@ end
 -- set up alternate view of fish data. do this as startup to
 -- lower overall dynamic hit when loading the window
 FishingInit.SetupByFishie = function()
-	if ( not FBI.ByFishie ) then
+	if ( not FishingBuddy.ByFishie ) then
 		local loc = GetLocale();
 		local fh = FishingBuddy_Info["FishingHoles"];
 		local ff = FishingBuddy_Info["Fishies"];
-		FBI.ByFishie = { };
-		FBI.SortedFishies = { };
+		FishingBuddy.ByFishie = { };
+		FishingBuddy.SortedFishies = { };
 		for idx,info in pairs(fh) do
 			for id,quantity in pairs(info) do
-				if ( not FBI.ByFishie[id] ) then
-					FBI.ByFishie[id] = { };
+				if ( not FishingBuddy.ByFishie[id] ) then
+					FishingBuddy.ByFishie[id] = { };
 					if ( ff[id] ) then
-						tinsert(FBI.SortedFishies,
+						tinsert(FishingBuddy.SortedFishies,
 								  { text = ff[id][loc], id = id });
 					end
 				end
-				if ( not FBI.ByFishie[id][idx] ) then
-					FBI.ByFishie[id][idx] = quantity;
+				if ( not FishingBuddy.ByFishie[id][idx] ) then
+					FishingBuddy.ByFishie[id][idx] = quantity;
 				else
-					FBI.ByFishie[id][idx] = FBI.ByFishie[id][idx] + quantity;
+					FishingBuddy.ByFishie[id][idx] = FishingBuddy.ByFishie[id][idx] + quantity;
 				end
 			end
 		end
-		FBI.FishSort(FBI.SortedFishies, true);
+		FishingBuddy.FishSort(FishingBuddy.SortedFishies, true);
 	end
 end
 
@@ -554,35 +639,36 @@ FishingInit.InitSortHelpers = function()
 	for mapId, name in pairs(FishingBuddy_Info["KnownZones"]) do
 		local zone = FL:GetLocZone(mapId)
 		if zone then
-			FBI.MappedZones[zone] = mapId
-			tinsert(FBI.SortedZones, zone);
-			FBI.SortedByZone[zone] = {};
+			FishingBuddy.MappedZones[zone] = mapId
+			tinsert(FishingBuddy.SortedZones, zone);
+			FishingBuddy.SortedByZone[zone] = {};
 			local idx = zmto(mapId, 0);
 			local count = FishingBuddy_Info["SubZones"][idx];
 			if ( count ) then
 				for s=1,count,1 do
 					idx = zmto(mapId,s);
 					local subzone = FL:GetLocSubZone(FishingBuddy_Info["SubZones"][idx]);
-					tinsert(FBI.SortedByZone[zone], subzone);
-					FBI.UniqueSubZones[subzone] = 1;
-					if ( not FBI.SubZoneMap[subzone] ) then
-						FBI.SubZoneMap[subzone] = {};
+					tinsert(FishingBuddy.SortedByZone[zone], subzone);
+					FishingBuddy.UniqueSubZones[subzone] = 1;
+					if ( not FishingBuddy.SubZoneMap[subzone] ) then
+						FishingBuddy.SubZoneMap[subzone] = {};
 					end
-					FBI.SubZoneMap[subzone][idx] = 1;
+					FishingBuddy.SubZoneMap[subzone][idx] = 1;
 				end
-				table.sort(FBI.SortedByZone[zone]);
+				table.sort(FishingBuddy.SortedByZone[zone]);
             end
 		end
 	end
-	table.sort(FBI.SortedZones);
-	for subzone,_ in pairs(FBI.UniqueSubZones) do
-		tinsert(FBI.SortedSubZones, subzone);
+	table.sort(FishingBuddy.SortedZones);
+	for subzone,_ in pairs(FishingBuddy.UniqueSubZones) do
+		tinsert(FishingBuddy.SortedSubZones, subzone);
 	end
-	table.sort(FBI.SortedSubZones);
+	table.sort(FishingBuddy.SortedSubZones);
 end
 
 FishingInit.SetupSchoolCounts = function()
 	local counts = {};
+	local zmto = FishingBuddy.ZoneMarkerTo;
 	if ( FishingBuddy_Info["FishSchools"] ) then
 		for mapId,holes in pairs(FishingBuddy_Info["FishSchools"]) do
 			for _,hole in pairs(holes) do
@@ -604,7 +690,7 @@ FishingInit.SetupSchoolCounts = function()
 			end
 		end
 	end
-	FBI.SZSchoolCounts = counts;
+	FishingBuddy.SZSchoolCounts = counts;
 end
 
 FishingInit.InitSettings = function()
@@ -655,9 +741,10 @@ FishingInit.RegisterMyAddOn = function()
 end
 
 FishingInit.RegisterFunctionTraps = function()
+	FishingBuddy.TrapWorldMouse();
 end
 
-function FBI:Initialize()
+FishingBuddy.Initialize = function()
 	if ( FishingInit ) then
 		-- Set everything up, then dump the code we don't need anymore
 		playerName, realmName = FishingInit.SetupNameInfo();
@@ -667,9 +754,9 @@ function FBI:Initialize()
 		FishingInit.RegisterMyAddOn();
 
 		gotSetupDone = true;
-		FBI:WatchUpdate();
+		FishingBuddy.WatchUpdate();
 		-- debugging state
-		FBI.Debugging = FBI:BaseGetSetting("FishDebug");
+		FishingBuddy.Debugging = FishingBuddy.BaseGetSetting("FishDebug");
 
 		-- we don't need these functions anymore, gc 'em
 		FishingInit = nil;

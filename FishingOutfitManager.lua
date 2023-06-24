@@ -1,11 +1,8 @@
 -- Manage outfits, whether they're from OutfitDisplayFrame or something else
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
-
-FBEnvironment.OutfitManager = {};
+FishingBuddy.OutfitManager = {};
 
 local FL = LibStub("LibFishing-1.0");
+local FBAPI = LibStub("FishingBuddyApi-1.0");
 
 -- 5.0.4 has a problem with a global "_" (see some for loops below)
 local _
@@ -46,13 +43,13 @@ local Accessories = {
 	[3567] = { ["n"] = "Dwarven Fishing Pole", ["score"] = 1, },
 };
 
-FBI.Commands[FBConstants.SWITCH] = {};
-FBI.Commands[FBConstants.SWITCH].func = function()
-		FBEnvironment.OutfitManager.Switch();
-		return true;
-	end;
+FishingBuddy.Commands[FBConstants.SWITCH] = {};
+FishingBuddy.Commands[FBConstants.SWITCH].func = function()
+													 FishingBuddy.OutfitManager.Switch();
+													 return true;
+												 end;
 
-FBEnvironment.OutfitManager.ItemStylePoints = function(itemno, enchant)
+FishingBuddy.OutfitManager.ItemStylePoints = function(itemno, enchant)
 	local points = 0;
 	if ( itemno ) then
 		if ( not enchant ) then
@@ -73,10 +70,10 @@ end
 local PoleCheck = nil;
 
 local function WaitForUpdate(self, arg1)
-	local hasPole = FBI:ReadyForFishing();
+	local hasPole = FBAPI:ReadyForFishing();
 	if ( hasPole == PoleCheck ) then
 		self:Hide();
-		FBI:FishingMode("OutfitManager");
+		FishingBuddy.FishingMode("OutfitManager");
 	end
 end
 
@@ -91,16 +88,16 @@ end
 
 local OutfitManagers = {};
 local OutfitManagerCount = 0;
-local OutfitManagerFrame = FBI:CreateFBDropDownMenu("FBOutfitManager", "FBOutfitManagerMenu");
+local OutfitManagerFrame = FishingBuddy.CreateFBDropDownMenu("FBOutfitManager", "FBOutfitManagerMenu");
 
 local function HasManager()
 	return (OutfitManagerCount > 0);
 end
-FBEnvironment.OutfitManager.HasManager = HasManager;
+FishingBuddy.OutfitManager.HasManager = HasManager;
 
-FBEnvironment.OutfitManager.Switch = function(outfitname)
-	if ( not FL:InCombat() and HasManager() ) then
-		local outfitter = FBI:GetSetting("OutfitManager");
+FishingBuddy.OutfitManager.Switch = function(outfitname)
+	if ( not FishingBuddy.CheckCombat() and HasManager() ) then
+		local outfitter = FishingBuddy.GetSetting("OutfitManager");
 		if ( outfitter and OutfitManagers[outfitter] ) then
 			local willBePole = OutfitManagers[outfitter].Switch(outfitname);
 			if ( willBePole ~= nil ) then
@@ -109,13 +106,13 @@ FBEnvironment.OutfitManager.Switch = function(outfitname)
 			end
 		end
 	else
-		FBI:UIError(FBConstants.COMPATIBLE_SWITCHER);
+		FishingBuddy.UIError(FBConstants.COMPATIBLE_SWITCHER);
 	end
 end
 
 local current_manager;
 
-FBEnvironment.OutfitManager.CurrentManager = function()
+FishingBuddy.OutfitManager.CurrentManager = function()
 	return current_manager;
 end
 
@@ -124,7 +121,7 @@ local function OutfitManagerMenuSetup()
 		local mgr = manager;
 		local info = {};
 		info.text = manager;
-		info.func = function() FBEnvironment.OutfitManager.ChooseManager(mgr); end;
+		info.func = function() FishingBuddy.OutfitManager.ChooseManager(mgr); end;
 		info.checked = ( current_manager == manager )
 		UIDropDownMenu_AddButton(info);
 	end
@@ -160,7 +157,7 @@ local function SetOutfitManagerDisplay()
 			end
 			idx = idx + 1;
 		end
-
+		
 		UIDropDownMenu_SetWidth(OutfitManagerFrame.menu, menuwidth + 32);
 		UIDropDownMenu_SetSelectedValue(OutfitManagerFrame.menu, show);
 		UIDropDownMenu_SetText(OutfitManagerFrame.menu, current_manager);
@@ -175,7 +172,7 @@ local function ChooseManager(manager)
 			local check = OutfitManagers[manager].Initialize();
 			OutfitManagers[manager].initialized = check or (check == nil);
 		end
-		FBI:SetSetting("OutfitManager", current_manager);
+		FishingBuddy.SetSetting("OutfitManager", current_manager);
 		for om,info in pairs(OutfitManagers) do
 			info.Choose(om == manager);
 		end
@@ -183,9 +180,9 @@ local function ChooseManager(manager)
 		return true;
 	end
 end
-FBEnvironment.OutfitManager.ChooseManager = ChooseManager;
+FishingBuddy.OutfitManager.ChooseManager = ChooseManager;
 
-FBEnvironment.OutfitManager.RegisterManager = function(name, init, choose, switch)
+FishingBuddy.OutfitManager.RegisterManager = function(name, init, choose, switch)
 	if ( not OutfitManagers[name] ) then
 		OutfitManagers[name] = {};
 		OutfitManagers[name].Name = name;
@@ -194,8 +191,8 @@ FBEnvironment.OutfitManager.RegisterManager = function(name, init, choose, switc
 	OutfitManagers[name].Initialize = init;
 	OutfitManagers[name].Choose = choose;
 	OutfitManagers[name].Switch = switch;
-
-	local cm = FBI:GetSetting("OutfitManager");
+	
+	local cm = FishingBuddy.GetSetting("OutfitManager");
 	choose(cm and (cm == name));
 end
 
@@ -204,7 +201,7 @@ local function UpdateManagers()
 		-- we pretty much have to use this one
 		current_manager = next(OutfitManagers);
 	else
-		current_manager = FBI:GetSetting("OutfitManager");
+		current_manager = FishingBuddy.GetSetting("OutfitManager");
 		if ( not current_manager or not OutfitManagers[current_manager] ) then
 			-- if nothing has ever been selected, default to ODF
 			if ( OutfitManagers["OutfitDisplayFrame"] ) then
@@ -217,15 +214,15 @@ local function UpdateManagers()
 	end
 	ChooseManager(current_manager);
 	-- in case we changed things (do we want/need to do this?)
-	-- FBI:SetSetting("OutfitManager", current_manager);
+	-- FishingBuddy.SetSetting("OutfitManager", current_manager);
 
 	-- add these to the general options frame
 	SetOutfitManagerDisplay();
 
 	-- no outfit managers, no outfit switching
 	if ( not HasManager() ) then
-		FBI:SetSetting("ClickToSwitch", 0);
-		FBI:SetSetting("MinimapClickToSwitch", 0);
+		FishingBuddy.SetSetting("ClickToSwitch", 0);
+		FishingBuddy.SetSetting("MinimapClickToSwitch", 0);
 	end
 end
 
@@ -239,17 +236,17 @@ local OutfitOptions = {
 
 local OMEvents = {};
 OMEvents["VARIABLES_LOADED"] = function()
-	FBI.OptionsFrame.HandleOptions(GENERAL, nil, OutfitOptions);
+	FishingBuddy.OptionsFrame.HandleOptions(GENERAL, nil, OutfitOptions);
 end
 
 OMEvents[FBConstants.FRAME_SHOW_EVT] = UpdateManagers;
 
-FBI:RegisterHandlers(OMEvents);
+FishingBuddy.RegisterHandlers(OMEvents);
 
 -- debugging
-FBEnvironment.OutfitManagers = OutfitManagers;
+FishingBuddy.OutfitManagers = OutfitManagers;
 
-FBEnvironment.OutfitManager.RegisterManager(NONE_KEY,
-											function() end,
-											function(useme) end,
-											function(o) end);
+FishingBuddy.OutfitManager.RegisterManager(NONE_KEY,
+											 function() end,
+											 function(useme) end,
+											 function(o) end);

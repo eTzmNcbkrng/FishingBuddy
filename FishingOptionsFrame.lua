@@ -1,7 +1,4 @@
 -- Handle all the option settings
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 local FL = LibStub("LibFishing-1.0");
 local LO = LibStub("LibOptionsFrame-1.0");
@@ -21,7 +18,7 @@ local function FindOptionInfo (setting)
     -- return nil;
 end
 
-function FBI:GetSettingOption(setting)
+local function GetSettingOption(setting)
     if ( setting ) then
         local info = FindOptionInfo(setting);
         if info and info.options then
@@ -30,9 +27,10 @@ function FBI:GetSettingOption(setting)
     end
     -- return nil;
 end
+FishingBuddy.GetSettingOption = GetSettingOption;
 
-function FBI:GetDefault(setting)
-    local opt = self:GetSettingOption(setting);
+local function GetDefault(setting)
+    local opt = GetSettingOption(setting);
     if ( opt ) then
         if ( opt.check and opt.checkfail ) then
             if ( not opt.check() ) then
@@ -43,21 +41,23 @@ function FBI:GetDefault(setting)
     end
     -- return nil;
 end
+FishingBuddy.GetDefault = GetDefault;
 
-function FBI:OptionGetSetting(setting)
-    local info = self:GetSettingOption(setting)
+local function OptionGetSetting(setting)
+    local info = GetSettingOption(setting)
     local val = nil
     if info then
         if ( info.global ) then
-            val = self:GlobalGetSetting(setting);
+            val = FishingBuddy.GlobalGetSetting(setting);
         else
-            val = self:BaseGetSetting(setting);
+            val = FishingBuddy.BaseGetSetting(setting);
         end
     end
     return val
 end
+FishingBuddy.OptionGetSetting = OptionGetSetting
 
-function FBI:GetSetting(setting)
+local function GetSetting(setting)
     local val = nil;
     if ( setting ) then
         local info = FindOptionInfo(setting);
@@ -65,54 +65,58 @@ function FBI:GetSetting(setting)
             if ( info.getter) then
                 val = info.getter(setting);
                 if ( val == nil ) then
-                    val = self:GetDefault(setting);
+                    val = GetDefault(setting);
                 end
             else
-                val = self:OptionGetSetting(setting)
+                val = OptionGetSetting(setting)
             end
         end
     end
     return val;
 end
+FishingBuddy.GetSetting = GetSetting;
 
-function FBI:GetSettingBool(setting)
-    local val = self:GetSetting(setting);
+local function GetSettingBool(setting)
+    local val = GetSetting(setting);
     return val ~= nil and (val == true or val == 1);
 end
+FishingBuddy.GetSettingBool = GetSettingBool;
 
-function FBI:OptionSetSetting(setting, value)
-    local info = self:GetSettingOption(setting)
+local function OptionSetSetting(setting, value)
+    local info = GetSettingOption(setting)
     if info then
         if ( info.global ) then
-            self:GlobalSetSetting(setting, value);
+            FishingBuddy.GlobalSetSetting(setting, value);
         else
-            self:BaseSetSetting(setting, value);
+            FishingBuddy.BaseSetSetting(setting, value);
         end
     end
 end
+FishingBuddy.OptionSetSetting = OptionSetSetting
 
-function FBI:SetSetting(setting, value)
+local function SetSetting(setting, value)
     if ( setting ) then
         local info = FindOptionInfo(setting);
         if ( info) then
             if ( info.setter ) then
-                local val = self:GetDefault(setting);
+                local val = GetDefault(setting);
                 if ( val == value ) then
                     info.setter(setting, nil);
                 else
                     info.setter(setting, value);
                 end
             else
-                self:OptionSetSetting(setting, value)
+                OptionSetSetting(setting, value)
             end
         end
     end
 end
+FishingBuddy.SetSetting = SetSetting;
 
-function FBI:ActiveSetting(setting)
-    local info = self:GetSettingOption(setting);
+local function ActiveSetting(setting)
+    local info = GetSettingOption(setting);
     if info then
-        local active = self:GetSettingBool(setting);
+        local active = GetSettingBool(setting);
         if info.active then
             return info.active(info, setting, active);
         end
@@ -121,12 +125,28 @@ function FBI:ActiveSetting(setting)
     -- Let's pretend we're good, even if we don't have the setting
     return true
 end
+FishingBuddy.ActiveSetting = ActiveSetting;
+
+-- tooltip support for disabled buttons
+local function Handle_OnEnter(self)
+    if(self.tooltipText ~= nil) then
+        GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT", 48, 0);
+        FL:AddTooltip(self.tooltipText);
+        GameTooltip:Show();
+    end
+end
+
+local function Handle_OnLeave(self)
+    if(self.tooltipText ~= nil) then
+        GameTooltip:Hide();
+    end
+end
 
 -- display all the option settings
-FBI.OptionsFrame = {};
+FishingBuddy.OptionsFrame = {};
 
 local function CheckButton_OnShow(button)
-    button:SetChecked(FBI:GetSettingBool(button.name));
+    button:SetChecked(GetSettingBool(button.name));
 end
 
 local function CheckButton_OnClick(button, quiet)
@@ -146,8 +166,8 @@ local function CheckButton_OnClick(button, quiet)
             end
         end
     end
-    FBI:SetSetting(button.name, value);
-    FBI:OptionsUpdate();
+    SetSetting(button.name, value);
+    FishingBuddy.OptionsUpdate();
     if ( button.update ) then
         button.update(button);
     end
@@ -158,7 +178,7 @@ end
 local tabbuttons = {};
 local tabmap = {};
 
-local function Handle_OptionsTabClick(tabframe, tabname)
+local function Handle_TabClick(tabframe, tabname)
     local target;
     if tabframe.target.handoff then
         target = tabframe.target.handoff
@@ -168,10 +188,11 @@ local function Handle_OptionsTabClick(tabframe, tabname)
     if target.ontabclick then
         target.ontabclick(tabframe, tabname)
     end
-    FBI:OptionsUpdate();
+    FishingBuddy.OptionsUpdate();
     target:LayoutOptions(FBOptionsTable[tabname].options);
     target:ShowButtons();
 end
+FishingBuddy.Handle_OptionsTabClick = Handle_TabClick
 
 local INV_MISC_QUESTIONMARK = "Interface\\Icons\\INV_Misc_QuestionMark";
 local function ProcessOptions(name, icon, options, setter, getter, last, frame)
@@ -186,7 +207,7 @@ local function ProcessOptions(name, icon, options, setter, getter, last, frame)
         name = "FBHIDDEN";
         handler.index = 0;
         -- handle option buttons that show up outside of option frames
-        for _,option in pairs(options) do
+        for name,option in pairs(options) do
             local button = FL:GetFrameInfo(option.button)
             if (option.init) then
                 option.init(option, button);
@@ -210,8 +231,8 @@ local function ProcessOptions(name, icon, options, setter, getter, last, frame)
     handler.getter = getter;
     handler.visible = maketab;
     if ( FBOptionsTable[name] ) then
-        for optname,info in pairs(FBOptionsTable[name].options) do
-            handler.options[optname] = FL:copytable(info);
+        for name,info in pairs(FBOptionsTable[name].options) do
+            handler.options[name] = FL:copytable(info);
         end
         handler.icon = FBOptionsTable[name].icon;
         handler.index = FBOptionsTable[name].index;
@@ -224,7 +245,7 @@ local function ProcessOptions(name, icon, options, setter, getter, last, frame)
     if ( maketab ) then
         local optiontab = tabmap[name];
         if ( not optiontab ) then
-            optiontab = frame:CreateTab(name, handler.icon, Handle_OptionsTabClick, name);
+            optiontab = frame:CreateTab(name, handler.icon, Handle_TabClick, name);
             tinsert(tabbuttons, optiontab);
             tabmap[name] = optiontab;
             handler.index = index;
@@ -232,7 +253,7 @@ local function ProcessOptions(name, icon, options, setter, getter, last, frame)
 
         -- if we show this one, then check to see if it has
         -- any options for the drop down menu
-        for _,option in pairs(handler.options) do
+        for name,option in pairs(handler.options) do
             if ( option.m ) then
                 handler.hasdd = true;
             end
@@ -263,7 +284,7 @@ local function HandleOptions(name, icon, options, setter, getter, last, frame)
                             ProcessOptions(rec.name, rec.icon, rec.options, rec.setter, rec.getter, rec.last, rec.frame);
                         end
                         _delayedoptions = nil;
-                        FBI:OptionsUpdate(true, false)
+                        FishingBuddy.OptionsUpdate(true, false)
                     end
                     _delayedframe:Hide();
                 end);
@@ -272,19 +293,21 @@ local function HandleOptions(name, icon, options, setter, getter, last, frame)
     end
     tinsert(_delayedoptions, { name = name, icon = icon, options = options, setter = setter, getter = getter, last = last, frame = frame } );
 end
-FBI.OptionsFrame.HandleOptions = HandleOptions;
+FishingBuddy.OptionsFrame.HandleOptions = HandleOptions;
 
-function FBEnvironment:HideOptionsTab(name)
+local function HideOptionsTab(name)
     if ( FBOptionsTable[name] and FBOptionsTable[name].visible ) then
         FBOptionsTable[name].visible = nil;
     end
 end
+FishingBuddy.HideOptionsTab = HideOptionsTab;
 
-function FBEnvironment:ShowOptionsTab(name)
+local function ShowOptionsTab(name)
     if ( FBOptionsTable[name] and not FBOptionsTable[name].visible ) then
         FBOptionsTable[name].visible = true;
     end
 end
+FishingBuddy.ShowOptionsTab = ShowOptionsTab;
 
 local function OptionsFrame_OnShow(self)
     local selected = self.selected;
@@ -308,32 +331,34 @@ local function OptionsFrame_OnShow(self)
 end
 
 -- Drop-down menu support
-function FBI:ToggleSetting(setting)
-    local value = self:GetSetting(setting);
+local function ToggleSetting(setting)
+    local value = GetSetting(setting);
     if ( not value ) then
         value = false;
     end
-    self:SetSetting(setting, not value);
-    FBI:OptionsUpdate(true);
+    SetSetting(setting, not value);
+    FishingBuddy.OptionsUpdate(true);
 end
+FishingBuddy.ToggleSetting = ToggleSetting;
 
 -- save some memory by keeping one copy of each one
 local ToggleFunctions = {};
 -- let's use closures
-function FBI:MakeToggle(name, callme)
+local function MakeToggle(name, callme)
     if ( not ToggleFunctions[name] ) then
         local n = name;
         local c = callme;
-        ToggleFunctions[name] = function() FBI:ToggleSetting(n); if (c) then c() end; end;
+        ToggleFunctions[name] = function() ToggleSetting(n); if (c) then c() end; end;
     end
     return ToggleFunctions[name];
 end
+FishingBuddy.MakeToggle = MakeToggle;
 
-function FBI:MakeClickToSwitchEntry(switchText, switchSetting, level, keepShowing, callMe)
+local function MakeClickToSwitchEntry(switchText, switchSetting, level, keepShowing, callMe)
     local entry = {};
     entry.text = switchText;
-    entry.func = self:MakeToggle(switchSetting, callMe);
-    entry.checked = self:GetSettingBool(switchSetting);
+    entry.func = MakeToggle(switchSetting, callMe);
+    entry.checked = FishingBuddy.GetSettingBool(switchSetting);
     entry.keepShownOnClick = keepShowing;
     UIDropDownMenu_AddButton(entry, level);
 end
@@ -352,14 +377,14 @@ local function MakeDropDownEntry(name, option, level)
     if ( addthis ) then
         local entry = {};
         entry.text = option.text;
-        entry.func = FBI:MakeToggle(name);
-        entry.checked = FBI:GetSettingBool(name);
+        entry.func = MakeToggle(name);
+        entry.checked = FishingBuddy.GetSettingBool(name);
         entry.keepShownOnClick = true;
         UIDropDownMenu_AddButton(entry, level);
     end
 end
 
-function FBI:DropDownInitFunc(level)
+local function MakeDropDownInitialize(self, level)
     if ( level == 1) then
         local entry = {};
         if ( self.title ) then
@@ -370,12 +395,12 @@ function FBI:DropDownInitFunc(level)
         end
 
         -- If no outfit frame, we can't switch outfits...
-        if ( FBEnvironment.OutfitManager.HasManager() ) then
-            self:MakeClickToSwitchEntry(self.switchText, self.switchSetting, level, 1);
+        if ( FishingBuddy.OutfitManager.HasManager() ) then
+            MakeClickToSwitchEntry(self.switchText, self.switchSetting, level, 1);
             MakeDropDownSep(level);
         end
 
-        table.wipe(entry);
+        wipe(entry);
         for tabname,handler in pairs(FBOptionsTable) do
             if (handler.hasdd) then
                 entry.text = tabname;
@@ -398,18 +423,34 @@ function FBI:DropDownInitFunc(level)
         end
     end
 end
+FishingBuddy.DropDownInitFunc = MakeDropDownInitialize;
 
 local FB_DropDownMenu = CreateFrame("Frame", "FB_DropDownMenu");
 local function UncheckHack(dropdownbutton)
     _G[dropdownbutton:GetName().."Check"]:Hide()
 end
 
+FishingBuddy.GetDropDown = function(switchText, switchSetting, title, frame)
+    if (not frame) then
+        frame = FB_DropDownMenu;
+        frame.displayMode = "MENU"
+    end
+
+    frame.title = title or FBConstants.NAME;
+    frame.switchText = switchText;
+    frame.switchSetting = switchSetting;
+    frame.initialize = MakeDropDownInitialize;
+    frame.UncheckHack = UncheckHack;
+
+    return frame;
+end
+
 -- Old style drop down handling, which will add taint
 -- Everything happens at level 1
-function FBI:MakeDropDown(switchText, switchSetting)
+FishingBuddy.MakeDropDown = function(switchText, switchSetting)
     -- If no outfit frame, we can't switch outfits...
-    if ( FBEnvironment.OutfitManager.HasManager() ) then
-        self:MakeClickToSwitchEntry(switchText, switchSetting, 1, 1);
+    if ( FishingBuddy.OutfitManager.HasManager() ) then
+        MakeClickToSwitchEntry(switchText, switchSetting, 1, 1);
         MakeDropDownSep(1);
     end
 
@@ -422,7 +463,7 @@ function FBI:MakeDropDown(switchText, switchSetting)
     end
 end
 
-function FBI:CreateLabeledThing(holdername, label, thing, thingname)
+local function CreateLabeledThing(holdername, label, thing, thingname)
     local holder = CreateFrame("Frame", holdername);
     thingname = thingname or 'thing';
     holder[thingname] = thing;
@@ -455,14 +496,15 @@ function FBI:CreateLabeledThing(holdername, label, thing, thingname)
 
     return holder;
 end
+FishingBuddy.CreateLabeledThing = CreateLabeledThing
 
 -- menuname has to be set regardless, or UI drop down doesn't work
-function FBI:CreateFBDropDownMenu(holdername, menuname)
+FishingBuddy.CreateFBDropDownMenu = function(holdername, menuname)
     if (not menuname) then
         menuname = holdername.."Menu"
     end
     local menu = CreateFrame("Frame", menuname, nil, "FishingBuddyDropDownMenuTemplate");
-    local holder = self:CreateLabeledThing(holdername, '', menu, 'menu')
+    local holder = CreateLabeledThing(holdername, '', menu, 'menu')
     menu:SetParent(holder)
     holder.width_adjust = -12;
     holder.html = CreateFrame("SimpleHTML", nil, holder);
@@ -478,16 +520,16 @@ end
 -- handle menu with a mapping table for settings to displayed values
 local function SetMappedValue(self, what, value)
     local show = self.Mapping[value];
-    FBI:SetSetting(what, value);
+    FishingBuddy.SetSetting(what, value);
     UIDropDownMenu_SetSelectedValue(self, show);
     UIDropDownMenu_SetText(self, show);
-    FBI:OptionsUpdate();
+    FishingBuddy.OptionsUpdate();
 end
 
 local function LoadMappedMenu(keymenu)
     local menu = keymenu.menu;
     local menuwidth = 0;
-    local setting = FBI:GetSetting(keymenu.Setting);
+    local setting = FishingBuddy.GetSetting(keymenu.Setting);
     for value,label in pairs(menu.Mapping) do
         local info = {};
         local v = value;
@@ -517,12 +559,13 @@ local function InitMappedMenu(option, button)
                                   end);
 end
 
-function FBI:CreateFBMappedDropDown(holdername, setting, label, mapping, menuname)
-    local keymenu = FBI:CreateFBDropDownMenu(holdername, menuname);
+FishingBuddy.CreateFBMappedDropDown = function(holdername, setting, label, mapping, menuname)
+    local keymenu = FishingBuddy.CreateFBDropDownMenu(holdername, menuname);
     keymenu.html:Hide();
     keymenu.menu.label:SetText(label);
     keymenu.Label = label;
     keymenu.Setting = setting;
+    keymenu.Build = BuildMappedMenu
     keymenu.menu.Mapping = mapping;
     keymenu.menu.SetMappedValue = SetMappedValue;
     keymenu.InitMappedMenu = InitMappedMenu;
@@ -530,7 +573,7 @@ function FBI:CreateFBMappedDropDown(holdername, setting, label, mapping, menunam
     return keymenu;
 end
 
-function FBI:GetOptionList()
+FishingBuddy.GetOptionList = function()
     local options = {};
     for _,info in pairs(FBOptionsTable) do
         for name,option in pairs(info.options) do
@@ -541,19 +584,19 @@ function FBI:GetOptionList()
 end
 
 -- Helper function
-function FBI:FitInOptionFrame(width)
+FishingBuddy.FitInOptionFrame = function(width)
     return FishingOptionsFrame:FitInFrame(width);
 end
 
-function FBI:EmbeddedOptions(frame)
-    frame.GetSettingBool = function(...) return FBI:GetSettingBool(...); end;
+FishingBuddy.EmbeddedOptions = function(frame)
+    frame.GetSettingBool = FishingBuddy.GetSettingBool
     LO:Embed(frame, CheckButton_OnClick, CheckButton_OnShow, FishingBuddyFrameInset);
 end
 
 -- Create the options frame, unmanaged -- we get managed specially later
 local f = FishingBuddyFrame:CreateManagedFrame("FishingOptionsFrame");
 
-FBI:EmbeddedOptions(f);
+FishingBuddy.EmbeddedOptions(f);
 LS:Embed(f);
 
 f:SetScript("OnShow", OptionsFrame_OnShow);

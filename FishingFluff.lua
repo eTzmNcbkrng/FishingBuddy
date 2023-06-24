@@ -3,9 +3,6 @@
 -- Turn on the fish finder
 -- Change your title to "Salty"
 -- Bring out a "fishing buddy"
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 local FL = LibStub("LibFishing-1.0");
 
@@ -15,8 +12,8 @@ local _
 local CurLoc = GetLocale();
 
 -- wrap settings
-local FBGetSetting = function(...) return FBI:GetSetting(...); end;
-local FBGetSettingBool = function(...) return FBI:GetSettingBool(...); end;
+local FBGetSetting = FishingBuddy.GetSetting;
+local FBGetSettingBool = FishingBuddy.GetSettingBool;
 
 local function GetSettingBool(setting)
     if (FBGetSettingBool("FishingFluff")) then
@@ -37,22 +34,42 @@ local FluffEvents = {};
 local unTrack = nil;
 local resetPVP = nil;
 
-function FBI:FishTrackingEnable(enabled)
+local function FishTrackingEnable(enabled)
     local findid = FL:GetFindFishID();
     if ( findid ) then
         if enabled then
-            local _, _, active, _ = C_Minimap.GetTrackingInfo(findid);
+            local _, _, active, _ = GetTrackingInfo(findid);
             if (not active) then
                 unTrack = true;
-                C_Minimap.SetTracking(findid, true);
+                SetTracking(findid, true);
             end
         elseif unTrack then
             unTrack = false;
-            C_Minimap.SetTracking(findid, false);
+            SetTracking(findid, false);
         end
     end
 end
+FishingBuddy.FishTrackingEnable = FishTrackingEnable
 
+
+local function Untrack(yes)
+    if ( yes ) then
+        FishTrackingEnable(false);
+    end
+end
+
+FluffEvents[FBConstants.FISHING_DISABLED_EVT] = function(started, logout)
+    if ( resetPVP ) then
+        SetPVP(1);
+    end
+    if ( logout ) then
+        FishingBuddy_Player["Untrack"] = unTrack;
+    else
+        Untrack(unTrack);
+    end
+    unTrack = nil;
+    resetPVP = nil;
+end
 
 FluffEvents[FBConstants.LOGIN_EVT] = function()
     if ( FishingBuddy_Player ) then
@@ -63,7 +80,7 @@ FluffEvents[FBConstants.LOGIN_EVT] = function()
     end
 end
 
-local GSB = function(...) return FBI:GetSettingBool(...); end;
+local GSB = FishingBuddy.GetSettingBool;
 local QuestBaits = {
     {
         item = 114628,		-- Icespine Stinger Bait
@@ -84,7 +101,7 @@ local objectiveMapID =  {
     550, -- [6]
 }
 
-function FBI:IsQuestFishing(item)
+local function IsQuestFishing(item)
     -- Check for hookshot
     if (GetItemCount(116755) > 0) then
         -- Better Nat's quest checking by Bodar (Curse)
@@ -108,15 +125,16 @@ function FBI:IsQuestFishing(item)
         end
     end
 end
+FishingBuddy.IsQuestFishing = IsQuestFishing
 
-function FBI:SetupSpecialItem(id, info, fixsetting, fixloc)
+local function SetupSpecialItem(id, info, fixsetting, fixloc)
     info.id = id
     if (fixsetting and info.enUS and not info.setting) then
         info.setting = info.enUS:gsub("%s+", "")
     end
     if (fixloc and not info[CurLoc]) then
         local link = "item:"..id;
-        local n,l = FL:GetItemInfoFields(link, FL.ITEM_NAME, FL.ITEM_LINK);
+        local n,l,_,_,_,_,_,_ = FL:GetItemInfo(link);
         if (n and l) then
             info[CurLoc] = n
         else
@@ -126,6 +144,7 @@ function FBI:SetupSpecialItem(id, info, fixsetting, fixloc)
 
     return info;
 end
+FishingBuddy.SetupSpecialItem = SetupSpecialItem
 
 local FishingItems = {};
 FishingItems[85973] = {
@@ -159,7 +178,7 @@ FishingItems[122742] = {
 FishingItems[116755] = {
     ["enUS"] = "Nat's Hookshot",
     spell = 171740,
-    usable = function(...) FBI:IsQuestFishing(...); end,
+    usable = IsQuestFishing,
 };
 
 local LevelingItems = {}
@@ -292,7 +311,7 @@ LevelingItems[133742] = {
 
 FBConstants.UNDERLIGHT_ANGLER = 133755;
 
-function FBI:CastAndThrow()
+local function CastAndThrow()
     if GSB("AutoOpen") then
         -- Only do this is we're using the Underlight Angler
         if FL:GetMainHandItem(true) == FBConstants.UNDERLIGHT_ANGLER then
@@ -309,14 +328,15 @@ function FBI:CastAndThrow()
         end
     end
 end
+FishingBuddy.CastAndThrow = CastAndThrow
 
-FBI.FishingItems = FishingItems;
+FishingBuddy.FishingItems = FishingItems;
 
 local FISHINGHATS = {
     [118393] = true,        -- Tentacled Hat
     [118380] = true,        -- HightFish Cap
 };
-FBEnvironment.FishingHats = FISHINGHATS;
+FishingBuddy.FishingHats = FISHINGHATS;
 
 local FluffOptions = {
     ["FishingFluff"] = {
@@ -346,7 +366,7 @@ local FluffOptions = {
 };
 
 local function ItemInit(option, button)
-    local n = GetItemInfo(option.id);
+    local n, _, _, _, _, _, _, _,_, _ = GetItemInfo(option.id);
     if (n) then
         option.text = n;
     else
@@ -355,13 +375,13 @@ local function ItemInit(option, button)
 end
 
 local function ItemCountVisible(option)
-    return FBI.FishingPlans:HaveThing(option.id, option)
+    return FishingBuddy.FishingPlans:HaveThing(option.id, option)
 end
 
-function FBI:UpdateFluffOption(id, info)
+local function UpdateItemOption(id, info)
     info.id = id;
     if (info.setting and not info.ignore) then
-        local option = {};
+        local option = {}; 
 
         option.id = id;
         option.toy = info.toy;
@@ -397,47 +417,49 @@ function FBI:UpdateFluffOption(id, info)
         end
     end
 end
+FishingBuddy.UpdateFluffOption = UpdateItemOption
 
 local function UpdateItemOptions()
     for id,info in pairs(FishingItems) do
-        FBI:UpdateFluffOption(id, info)
+        UpdateItemOption(id, info)
     end
 
-    FBI.FluffOptions = FluffOptions;
+    FishingBuddy.FluffOptions = FluffOptions;
 end
 
 -- Turn items into options we can set
-function FBI:SetupSpecialItems(items, fixsetting, fixloc, skipitem)
+local function SetupSpecialItems(items, fixsetting, fixloc, skipitem)
     for id,info in pairs(items) do
-        info = self:SetupSpecialItem(id, info, fixsetting, fixloc);
+        info = SetupSpecialItem(id, info, fixsetting, fixloc);
         if ( not skipitem ) then
             FishingItems[id] = info;
-            FBI:UpdateFluffOption(id, info)
+            UpdateItemOption(id, info)
         end
     end
 end
+FishingBuddy.SetupSpecialItems = SetupSpecialItems
 
-function FBI:AddFluffOptions(options)
+local function AddFluffOptions(options)
     if FL:IsClassic() then
         local _, name = FL:GetFishingSpellInfo();
-        FBI.OptionsFrame.HandleOptions(name, "Interface\\Icons\\INV_Fishingpole_02", options);
+        FishingBuddy.OptionsFrame.HandleOptions(name, "Interface\\Icons\\INV_Fishingpole_02", options);
     else
-        FBI.OptionsFrame.HandleOptions(FBConstants.CONFIG_FISHINGFLUFF_ONOFF, "Interface\\Icons\\inv_misc_food_164_fish_seadog", options);
+        FishingBuddy.OptionsFrame.HandleOptions(FBConstants.CONFIG_FISHINGFLUFF_ONOFF, "Interface\\Icons\\inv_misc_food_164_fish_seadog", options);
     end
 end
+FishingBuddy.AddFluffOptions = AddFluffOptions
 
 FluffEvents["VARIABLES_LOADED"] = function(started)
     -- Let's make sure we have buffs on all the items we currently know about
     for id,info in pairs(FishingItems) do
-        FBI:SetupSpecialItem(id, info);
+        SetupSpecialItem(id, info);
     end
-    FBI:SetupSpecialItems(LevelingItems, false, true, true);
+    SetupSpecialItems(LevelingItems, false, true, true);
 end
 
 FluffEvents[FBConstants.FIRST_UPDATE_EVT] = function()
     UpdateItemOptions();
-    FBI:AddFluffOptions(FluffOptions)
+    AddFluffOptions(FluffOptions)
 end
 
-
-FBI:RegisterHandlers(FluffEvents);
+FishingBuddy.RegisterHandlers(FluffEvents);

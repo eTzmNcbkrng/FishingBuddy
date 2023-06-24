@@ -1,8 +1,5 @@
 -- Display some information about the people who helped
 -- Some information about whom to thank
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 local credits = {};
 
@@ -139,9 +136,6 @@ credits[FBConstants.ROLE_HELP_BUGS] = {
 	["CptTibas"] = { "Gossip options fix" },
 	["hanzo79"] = { "Auto-interact value fix" },
 	["Zilom"] = { "Fast loot addon compat fix" },
-	["gryphon63"] = { "AboutBox alpha fixes", "Conjurer Margoss turn-in fix", },
-	["jleafey"] = { "Typo hunting" },
-	["Spiritwlf"] = { "Major fixes for Dragonflight, like, major!" },
 };
 
 -- Ideas and suggestions
@@ -190,7 +184,6 @@ credits[FBConstants.ROLE_ADDON_AUTHORS] = {
 	["Esamynn"] = { "Astrolabe", },
 	["ckknight"] = { "LibTourist-3.0", "LibBabble-Zone-3.0", "LibCrayon-3.0", },
 	["Arrowmaster"] = { "LibTourist-3.0", },
-	["Odica_Jaedenar"] = { "LibTourist-3.0", },
 	["Odica"] = { "LibTourist-3.0", },
 	["Ackis"] = { "LibBabble-Zone-3.0", },
 	["Nevcairiel"] = { "LibBabble-Zone-3.0", "LibStub", "LibBabble-SubZone-3.0", "CallbackHandler-1.0",  "HereBeDragons" },
@@ -238,6 +231,9 @@ local function UpdateCreditPanel(self, elapsed)
 		self:SetHeight(self.lines[1]:GetHeight()*4)
 		self:SetPoint("TOP", self.parent.Thanks, "BOTTOM", 0, -(self.offset-1)*self:GetHeight()-self.lines[1]:GetHeight());
 		-- Fade in everything
+		for _,line in ipairs(self.lines) do
+			line:SetAlpha(self.fadevalue)
+		end
 		if ( self.fadevalue < 1.0) then
 			self.fadevalue = self.fadevalue + 0.05
 			self.currenttime = 0.1
@@ -245,9 +241,6 @@ local function UpdateCreditPanel(self, elapsed)
 			self.fadestate = 1
 			self.currenttime = 5.0 + math.random()*1.0;
 			self.fadevalue = 1.0
-		end
-		for _,line in ipairs(self.lines) do
-			line:SetAlpha(self.fadevalue)
 		end
 	elseif (self.fadestate == 1) then
 		-- Pause for display
@@ -268,17 +261,14 @@ local function UpdateCreditPanel(self, elapsed)
 		end
 	elseif (self.fadestate == 2) then
 		-- Fade out detail
+		self.lines[3]:SetAlpha(self.fadevalue);
 		if ( self.fadevalue > 0.0) then
 			self.fadevalue = self.fadevalue - 0.05
-			if self.fadevalue < 0.0 then
-				self.fadevalue = 0.0
-			end
 			self.currenttime = 0.1
 		else
 			self.fadestate = 3
 			self.fadevalue = 0.0
 		end
-		self.lines[3]:SetAlpha(self.fadevalue);
 	elseif (self.fadestate == 3) then
 		-- Fade in detail
 		self.lines[3]:SetText(self.data.what[self.whatidx])
@@ -293,18 +283,15 @@ local function UpdateCreditPanel(self, elapsed)
 		end
 	elseif (self.fadestate == 4) then
 		-- Fade out everything
+		for _,line in pairs(self.lines) do
+			line:SetAlpha(self.fadevalue)
+		end
 		if ( self.fadevalue > 0.0) then
 			self.fadevalue = self.fadevalue - 0.05
-			if self.fadevalue < 0.0 then
-				self.fadevalue = 0.0
-			end
 			self.currenttime = 0.1
 		else
 			self.fadestate = 5
 			self.fadevalue = 0.0
-		end
-		for _,line in pairs(self.lines) do
-			line:SetAlpha(self.fadevalue)
 		end
 	elseif (self.fadestate == 5) then
 		-- Pause after fading out
@@ -320,7 +307,7 @@ local function MakeCreditPanel(parent, alignment, offset)
 	panel.lines = {};
 	local point = panel
 	local where = "TOP"
-	for _=1,3 do
+	for idx=1,3 do
 		local line = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		line:SetPoint("TOPLEFT", point, where.."LEFT", 0, 0)
 		line:SetPoint("TOPRIGHT", point, where.."RIGHT", 0, 0)
@@ -347,7 +334,7 @@ local function AboutSetup(self)
 		self.Author:SetPoint("RIGHT", self, "RIGHT", -48, 0)
 		self.Author:SetText(FBConstants.AUTHOR)
 		self.Author:Show()
-
+		
 		self.Copyright = self:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 		self.Copyright:SetPoint("TOP", self.Author, "BOTTOM", 0, -10)
 		self.Copyright:SetPoint("LEFT", self, "LEFT", 0, 0)
@@ -355,7 +342,7 @@ local function AboutSetup(self)
 		self.Copyright:SetJustifyH("CENTER")
 		self.Copyright:SetText(FBConstants.COPYRIGHT)
 		self.Copyright:Show()
-
+	
 		self.Thanks = self:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 		self.Thanks:SetPoint("TOP", self.Copyright, "BOTTOM", 0, -10)
 		self.Thanks:SetPoint("LEFT", self, "LEFT", 0, 0)
@@ -364,7 +351,7 @@ local function AboutSetup(self)
 		self.Thanks:SetText(FBConstants.THANKS)
 		self.Thanks:Show()
 		self.Thanks.idx = -1;
-
+	
 		self.categories = {}
 		for what,_ in pairs(credits) do
 			tinsert(self.categories, what)
@@ -375,7 +362,7 @@ local function AboutSetup(self)
 				tinsert(self.credits, { title=idx, who=who, what=what, sort=math.random() })
 			end
 		end
-
+	
 		self.Panels = {};
 		for idx=1,5 do
 			local panel = MakeCreditPanel(self, self.Thanks, idx)
@@ -384,7 +371,7 @@ local function AboutSetup(self)
 			panel.categories = self.categories
 			tinsert(self.Panels, panel)
 		end
-
+		
 		-- Dump the storage, now that we have a better table
 		credits = nil;
 		table.sort(self.credits, function (a, b) return a.sort < b.sort; end)
@@ -402,7 +389,7 @@ local AboutOptions = {
 };
 
 local function OnEvent(self, _, ...)
-	FBI.OptionsFrame.HandleOptions(FBConstants.ABOUT_TAB, "Interface\\Icons\\Inv_Misc_Questionmark", AboutOptions, nil, nil, true);
+	FishingBuddy.OptionsFrame.HandleOptions(FBConstants.ABOUT_TAB, "Interface\\Icons\\Inv_Misc_Questionmark", AboutOptions, nil, nil, true);
 	self:UnregisterEvent("VARIABLES_LOADED");
 end
 

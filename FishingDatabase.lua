@@ -1,9 +1,6 @@
--- FBI
+-- FishingBuddy
 --
 -- Handle collecting data about fishies.
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 -- 5.0.4 has a problem with a global "_" (see some for loops below)
 local _
@@ -11,8 +8,8 @@ local _
 local FL = LibStub("LibFishing-1.0");
 local LO = LibStub("LibOptionsFrame-1.0");
 
-local zmto = function(...) return FBI:ZoneMarkerTo(...); end;
-local zmex = function(...) return FBI:ZoneMarkerEx(...); end;
+local zmto = FishingBuddy.ZoneMarkerTo;
+local zmex = FishingBuddy.ZoneMarkerEx;
 
 -- Nat Pagle fish
 local PagleFish = {};
@@ -73,7 +70,7 @@ PagleFish[110508] = {
 	["enUS"] = "Sea Scorpion Minnow",
 };
 
-FBI.PagleFish = PagleFish;
+FishingBuddy.PagleFish = PagleFish;
 
 -- we should collect these, but then they would be in the cache
 local QuestItems = {};
@@ -131,14 +128,15 @@ local QuestItems = {};
 		["enUS"] = "Blind Cavefish",
 		open = true,
 	};
-	FBI.QuestItems = QuestItems;
+	FishingBuddy.QuestItems = QuestItems;
 
 -- handle the vagaries of zones and subzones
 local subzonemapping;
 
-function FBI:ResetMappings()
+local function ResetMappings()
 	subzonemapping = nil;
 end
+FishingBuddy.ResetMappings = ResetMappings;
 
 local function initmappings()
 	if ( not subzonemapping ) then
@@ -469,12 +467,13 @@ local function GetNewMapId(mapId)
 	return oldToNewMapId[mapId] or mapId
 end
 
-function FBI:GetCurrentMapIdInfo()
+local function GetCurrentMapIdInfo()
 	local mapId, subzone = FL:GetZoneInfo()
 	return GetNewMapId(mapId) or mapId, subzone
 end
+FishingBuddy.GetCurrentMapIdInfo = GetCurrentMapIdInfo
 
-function FBI:GetZoneIndex(mapId, subzone, marker)
+local function GetZoneIndex(mapId, subzone, marker)
 	initmappings();
 	if ( not subzonemapping[mapId] ) then
 		subzonemapping[mapId] = {};
@@ -499,29 +498,31 @@ function FBI:GetZoneIndex(mapId, subzone, marker)
 		return mapId, subzonemapping[mapId][subzone];
 	end
 end
+FishingBuddy.GetZoneIndex = GetZoneIndex;
 
-function FBI:GetCurrentZoneIndex(marker)
+local function GetCurrentZoneIndex(marker)
 	initmappings();
-	local mapId, subzone = self:GetCurrentMapIdInfo();
-	return self:GetZoneIndex(mapId, subzone, marker)
+	local mapId, subzone = GetCurrentMapIdInfo();
+	return GetZoneIndex(mapId, subzone, marker)
 end
+FishingBuddy.GetCurrentZoneIndex = GetCurrentZoneIndex;
 
-function FBI:AddZoneIndex(mapId, subzone, marker)
+local function AddZoneIndex(mapId, subzone, marker)
 	if ( not mapId ) then
-		mapId, subzone = self:GetCurrentMapIdInfo();
+		mapId, subzone = GetCurrentMapIdInfo();
 	end
 	subzone = FL:GetBaseSubZone(subzone);
 	FishingBuddy_Info["KnownZones"][mapId] = subzone
 
 	local loczone = FL:GetLocZone(mapId);
-	local zidx, sidx = self:GetZoneIndex(mapId, subzone);
+	local zidx, sidx = GetZoneIndex(mapId, subzone);
 
-	if ( FBI.SortedZones ) then
-		if not FBI.MappedZones[loczone] then
-			tinsert(FBI.SortedZones, loczone);
-			table.sort(FBI.SortedZones);
+	if ( FishingBuddy.SortedZones ) then
+		if not FishingBuddy.MappedZones[loczone] then
+			tinsert(FishingBuddy.SortedZones, loczone);
+			table.sort(FishingBuddy.SortedZones);
 		end
-		FBI.MappedZones[loczone] = mapId
+		FishingBuddy.MappedZones[loczone] = mapId
 	end
 
 	local zidm = zmto(zidx, 0);
@@ -553,24 +554,24 @@ function FBI:AddZoneIndex(mapId, subzone, marker)
 		subzonemapping[zidx][subzone] = sidx;
 	end
 	-- keep sort helpers up to date
-	if ( newsubzone and FBI.SortedByZone ) then
-		if ( not FBI.SortedByZone[loczone] ) then
-			FBI.SortedByZone[loczone] = {};
+	if ( newsubzone and FishingBuddy.SortedByZone ) then
+		if ( not FishingBuddy.SortedByZone[loczone] ) then
+			FishingBuddy.SortedByZone[loczone] = {};
 		end
-		tinsert(FBI.SortedByZone[loczone], locsubzone);
-		table.sort(FBI.SortedByZone[loczone]);
+		tinsert(FishingBuddy.SortedByZone[loczone], locsubzone);
+		table.sort(FishingBuddy.SortedByZone[loczone]);
 
-		if ( not FBI.UniqueSubZones[locsubzone] ) then
-			FBI.UniqueSubZones[locsubzone] = 1;
-			tinsert(FBI.SortedSubZones, locsubzone);
-			table.sort(FBI.SortedSubZones);
+		if ( not FishingBuddy.UniqueSubZones[locsubzone] ) then
+			FishingBuddy.UniqueSubZones[locsubzone] = 1;
+			tinsert(FishingBuddy.SortedSubZones, locsubzone);
+			table.sort(FishingBuddy.SortedSubZones);
 		end
 
-		if ( not FBI.SubZoneMap[subzone] ) then
-			FBI.SubZoneMap[subzone] = {};
+		if ( not FishingBuddy.SubZoneMap[subzone] ) then
+			FishingBuddy.SubZoneMap[subzone] = {};
 		end
 		local sidm = zmto(zidx, sidx);
-		FBI.SubZoneMap[subzone][sidm] = 1;
+		FishingBuddy.SubZoneMap[subzone][sidm] = 1;
 	end
 	if ( marker ) then
 		return zmto(zidx, subzonemapping[zidx][subzone]);
@@ -578,26 +579,28 @@ function FBI:AddZoneIndex(mapId, subzone, marker)
 		return zidx, subzonemapping[zidx][subzone];
 	end
 end
+FishingBuddy.AddZoneIndex = AddZoneIndex;
 
 -- User interface handling
 local function IsRareFish(id, forced)
 	-- always skip extravaganza fish
-	if ( FBI.Extravaganza and FBI.Extravaganza.Fish[id] ) then
+	if ( FishingBuddy.Extravaganza and FishingBuddy.Extravaganza.Fish[id] ) then
 		return true;
 	end
 	return ( not forced and QuestItems[id] );
 end
 
-function FBI:IsQuestFish(id)
+local function IsQuestFish(id)
 	if ( FishingBuddy_Info["Fishies"][id].quest or QuestItems[id] ) then
 		return true;
 	end
 	-- return nil;
 end
+FishingBuddy.IsQuestFish = IsQuestFish;
 
-function FBI:IsCountedFish(id)
+FishingBuddy.IsCountedFish = function(id)
 	id = tonumber(id);
-	if ( self:IsQuestFish(id) or IsRareFish(id) or FL:IsMissedFish(id) ) then
+	if ( IsQuestFish(id) or IsRareFish(id) or FL:IsMissedFish(id) ) then
 		return false;
 	end
 	if ( id == 40199 ) then
@@ -606,10 +609,10 @@ function FBI:IsCountedFish(id)
 	return true;
 end
 
-local questType = _G.GetItemClassInfo(Enum.ItemClass.Questitem);
+local questType = _G.GetItemClassInfo(LE_ITEM_CLASS_QUESTITEM);
 local CurLoc = GetLocale();
-function FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quality, level, it, st, poolhint)
-	local GSB = function(...) return FBI:GetSettingBool(...); end;
+local function AddFishie(color, id, name, mapId, subzone, texture, quantity, quality, level, it, st, poolhint)
+	local GSB = FishingBuddy.GetSettingBool;
 	if ( id and not FishingBuddy_Info["Fishies"][id] ) then
 		if ( not color ) then
 			local _,_,_,hex = GetItemQualityColor(quality);
@@ -622,9 +625,9 @@ function FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quali
 		if ( color ~= "ffffffff" ) then
 			FishingBuddy_Info["Fishies"][id].color = color;
 		end
-		if ( FBI.SortedFishies ) then
-			tinsert(FBI.SortedFishies, { text = name, id = id });
-			FBI.FishSort(FBI.SortedFishies, true);
+		if ( FishingBuddy.SortedFishies ) then
+			tinsert(FishingBuddy.SortedFishies, { text = name, id = id });
+			FishingBuddy.FishSort(FishingBuddy.SortedFishies, true);
 		end
 	end
 	if ( name and not FishingBuddy_Info["Fishies"][id][CurLoc] ) then
@@ -648,15 +651,20 @@ function FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quali
 			end
 		end
 		if ( FishingBuddy_Info["Fishies"][id].canopen ) then
-			table.insert(FBI.OpenThisFishId, id);
+			table.insert(FishingBuddy.OpenThisFishId, id);
 		end
 	end
 
-	if ( not subzone ) then
-		_, subzone = self:GetCurrentMapIdInfo();
+	-- Play a sound on Nat Pagle rep
+	if ( PagleFish[id] and GSB("DingQuestFish") ) then
+		PlaySound(SOUNDKIT.IG_QUEST_LIST_COMPLETE, "master");
 	end
 
-	local zidx, sidx = self:AddZoneIndex(mapId, subzone);
+	if ( not subzone ) then
+		_, subzone = GetCurrentMapIdInfo();
+	end
+
+	local zidx, sidx = AddZoneIndex(mapId, subzone);
 	local idx = zmto(zidx, sidx);
 
 	local ft = FishingBuddy_Info["FishTotals"];
@@ -679,20 +687,20 @@ function FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quali
 	if ( not fh[idx][id] ) then
 		fh[idx][id] = quantity;
 		if ( GSB("ShowNewFishies") ) then
-			FBI:Print(FBConstants.ADDFISHINFOMSG, name or UNKNOWN, subzone or FL:GetLocZone(mapId));
+			FishingBuddy.Print(FBConstants.ADDFISHINFOMSG, name or UNKNOWN, subzone or FL:GetLocZone(mapId));
 		end
 	else
 		fh[idx][id] = fh[idx][id] + quantity;
 	end
 
-	if ( FBI.ByFishie ) then
-		if ( not FBI.ByFishie[id] ) then
-			FBI.ByFishie[id] = {};
+	if ( FishingBuddy.ByFishie ) then
+		if ( not FishingBuddy.ByFishie[id] ) then
+			FishingBuddy.ByFishie[id] = {};
 		end
-		if ( not FBI.ByFishie[id][idx] ) then
-			FBI.ByFishie[id][idx] = quantity;
+		if ( not FishingBuddy.ByFishie[id][idx] ) then
+			FishingBuddy.ByFishie[id][idx] = quantity;
 		else
-			FBI.ByFishie[id][idx] = FBI.ByFishie[id][idx] + quantity;
+			FishingBuddy.ByFishie[id][idx] = FishingBuddy.ByFishie[id][idx] + quantity;
 		end
 	end
 
@@ -714,7 +722,6 @@ function FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quali
 	if ( not skillcheck ) then
 		skillcheck = skill + mods;
 	end
-
 	if ( skillcheck > 0 ) then
 		if ( not fs[idx] or skillcheck < fs[idx] ) then
 			fs[idx] = skillcheck;
@@ -729,8 +736,9 @@ function FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quali
 		end
 	end
 
-	FBI:RunHandlers(FBConstants.ADD_FISHIE_EVT, id, name, mapId, subzone, texture, quantity, quality, level, idx, poolhint);
+	FishingBuddy.RunHandlers(FBConstants.ADD_FISHIE_EVT, id, name, mapId, subzone, texture, quantity, quality, level, idx, poolhint);
 end
+FishingBuddy.AddFishie = AddFishie;
 
 -- we want to dismiss the loot window as fast as possible
 local lootframe = CreateFrame("Frame");
@@ -740,17 +748,17 @@ local lootcache = {}
 local lootcheck = false;
 local lootcount = 0;
 local function ProcessFishLoot()
-	local mapId, subzone = FBI:GetCurrentMapIdInfo();
+	local mapId, subzone = GetCurrentMapIdInfo();
 	while (table.getn(lootcache) > 0) do
 		local info = table.remove(lootcache)
-		local texture, fishie, quantity, quality = info.texture, info.fishie, info.quantity, info.quality;
-		local nm,link,it,st,el,il = FL:GetItemInfoFields(info.link, FL.ITEM_NAME, FL.ITEM_LINK, FL.ITEM_TYPE, FL.ITEM_SUBTYPE, FL.ITEM_EQUIPLOC, FL.ITEM_LEVEL);
+		local texture, fishie, quantity, quality, link = info.texture, info.fishie, info.quantity, info.quality, info.link;
+		local nm,link,_,_,it,st,_,el,_,il = FL:GetItemInfo(link);
 		local color, id, name = FL:SplitLink(link, true);
 
 		-- handle things we can't actually count that might be in our fish (e.g. Garrison Resources)
 		if (id) then
 			-- Fishing pool check? poolhint and (index == 1)
-			FBI:AddFishie(color, id, name, mapId, subzone, texture, quantity, quality, nil, it, st, false);
+			AddFishie(color, id, name, mapId, subzone, texture, quantity, quality, nil, it, st, false);
 		end
 		lootcount = lootcount + 1;
 		lootcheck = true;
@@ -760,18 +768,20 @@ local function ProcessFishLoot()
 end
 lootframe:SetScript("OnUpdate", ProcessFishLoot);
 
-function FBI:GetLootState()
+local function GetLootState()
 	return lootcount, lootcheck;
 end
+FishingBuddy.GetLootState = GetLootState;
 
-function FBI:AddLootCache(texture, fishie, quantity, quality, link, poolhint)
+local function AddLootCache(texture, fishie, quantity, quality, link, poolhint)
 	tinsert(lootcache, {texture = texture, fishie = fishie, quantity = quantity, quality = quality, link = link, poolhint = poolhint});
 	lootframe:Show()
 end
+FishingBuddy.AddLootCache = AddLootCache
 
-FBI.Commands[FBConstants.UPDATEDB] = {};
-FBI.Commands[FBConstants.UPDATEDB].help = FBConstants.UPDATEDB_HELP;
-FBI.Commands[FBConstants.UPDATEDB].func =
+FishingBuddy.Commands[FBConstants.UPDATEDB] = {};
+FishingBuddy.Commands[FBConstants.UPDATEDB].help = FBConstants.UPDATEDB_HELP;
+FishingBuddy.Commands[FBConstants.UPDATEDB].func =
 	function(what)
 		local ff = FishingBuddy_Info["Fishies"];
 		local forced;
@@ -789,7 +799,7 @@ FBI.Commands[FBConstants.UPDATEDB].func =
 					-- fetch the data (may disconnect)
 					FishingBuddyTooltip:SetHyperlink(link);
 					-- now that we have it in our cache, get the name
-					local nm, it, st = FL:GetItemInfoFields(link, FL.ITEM_NAME, FL.ITEM_TYPE, FL.ITEM_SUBTYPE);
+					local nm,li,ra,ml,it,st,sc,el,tx,il = FL:GetItemInfo(link);
 					if ( nm ) then
 						count = count + 1;
 						FishingBuddy_Info["Fishies"][id][CurLoc] = nm;
@@ -798,7 +808,7 @@ FBI.Commands[FBConstants.UPDATEDB].func =
 				end
 			end
 		end
-		FBI:Print(FBConstants.UPDATEDB_MSG, count);
+		FishingBuddy.Print(FBConstants.UPDATEDB_MSG, count);
 		return true;
 	end;
 

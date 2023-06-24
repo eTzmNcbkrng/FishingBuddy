@@ -2,16 +2,13 @@
 --
 -- Let's make a plan that we can carry through with, allowing us to group
 -- item choices instead of handling each item separately.
-local addonName, FBStorage = ...
-local  FBI = FBStorage
-local FBConstants = FBI.FBConstants;
 
 -- 5.0.4 has a problem with a global "_" (see some for loops below)
 local _
 
 local FL = LibStub("LibFishing-1.0");
 
-local GSB = function(...) return FBI:GetSettingBool(...); end;
+local GSB = FishingBuddy.GetSettingBool
 local CurLoc = GetLocale();
 
 local FishingPlans = {}
@@ -21,7 +18,7 @@ function FishingPlans:HaveThing(itemid, info)
 end
 
 function FishingPlans:ItemCooldownOn(id)
-    local start, duration, enable = GetItemCooldown(id);
+    local start, duration, enable = C_Container.GetItemCooldown(id);
     local et = (start + duration) - GetTime();
     if (et > 0) then
         return true;
@@ -68,12 +65,12 @@ function FishingPlans:HavePlans()
     return #self.planqueue > 0
 end
 
-function FishingPlans:HaveEntry(itemid, name, itemtype)
+function FishingPlans:HaveEntry(itemid, name, targetid)
     if itemid then
         for _, plan in ipairs(self.planqueue) do
             if (not itemid or plan.itemid == itemid) and
             (not name or plan.name == name) and
-            (not itemtype or plan.itemtype == itemtype) then
+            (not targetid or plan.targetid == targetid) then
                 return true
             end
         end
@@ -81,12 +78,12 @@ function FishingPlans:HaveEntry(itemid, name, itemtype)
     return nil
 end
 
-function FishingPlans:AddEntry(itemid, name, itemtype)
+function FishingPlans:AddEntry(itemid, name, targetid)
     if itemid then
         tinsert(self.planqueue, {
             ["itemid"] = itemid,
             ["name"] = name,
-            ["itemtype"] = itemtype
+            ["targetid"] = targetid
         })
     end
 end
@@ -94,7 +91,7 @@ end
 function FishingPlans:GetPlan()
     if self:HavePlans() then
         local head = table.remove(self.planqueue, 1)
-        return true, head.itemid, head.name, head.itemtype
+        return true, head.itemid, head.name, head.targetid
     end
     -- return nil
 end
@@ -108,9 +105,12 @@ function FishingPlans:ExecutePlans(force)
     end
 end
 
-FBI.FishingPlans = FishingPlans
+FishingBuddy.FishingPlans = FishingPlans
 
-EventRegistry:RegisterCallback(FBConstants.FISHING_DISABLED_EVT, function()
+local PlanEvents = {}
+PlanEvents[FBConstants.FISHING_DISABLED_EVT] = function()
     FishingPlans.planqueue = {}
-end)
+end
+
+FishingBuddy.RegisterHandlers(PlanEvents);
 
